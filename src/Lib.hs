@@ -7,4 +7,4 @@ the skeleton code, including this one. You should give your
 modules sensible names that correspond to their contents. -}
 
 someFunc :: IO ()
-someFunc = putStrLn "someFunc"
+someFunc = putStrLn "Hello World"
