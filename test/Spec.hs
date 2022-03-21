@@ -7,4 +7,4 @@ lab sheets for how that can be done.
 -}
 
 main :: IO ()
-main = putStrLn "Test suite not yet implemented"
+main = display window background drawing
