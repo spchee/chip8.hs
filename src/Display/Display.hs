@@ -3,7 +3,7 @@
 module Display.Display where
 import Graphics.Gloss hiding (Point)
 import Graphics.Gloss.Data.Picture hiding (Point)
-import Data.Vector as V hiding (replicate)
+import Data.Vector as V
 import Control.Monad.State
 width :: Integer
 width = 64
@@ -11,16 +11,13 @@ height :: Integer
 height = 32
 
 data Colour = White | Black
+    deriving (Eq, Show)
 
-
-
-data PixelGrid = PixelGrid [Colour]
-
-type GridState = State PixelGrid
+type GridState = State (V.Vector Colour)
 
 initGrid :: GridState ()
 initGrid = do
-    put $ PixelGrid $ replicate 2048 Black
+    put $ V.replicate 2048 Black
 
 getCoords:: Int -> (Int, Int)
 getCoords n = (10 * (n `mod` 64), (n `div` 32) * 10)

@@ -25,6 +25,7 @@ library
       src
   build-depends:
       base >=4.7 && <5
+    , bytestring
     , gloss
     , mtl
     , vector
@@ -39,6 +40,7 @@ executable cswk-program-exe
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , bytestring
     , cswk-program
     , gloss
     , mtl
@@ -55,6 +57,7 @@ test-suite cswk-program-test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , bytestring
     , cswk-program
     , gloss
     , mtl

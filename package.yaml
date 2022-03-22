@@ -9,6 +9,7 @@ dependencies:
 - gloss 
 - mtl 
 - vector
+- bytestring
 
 
 library:

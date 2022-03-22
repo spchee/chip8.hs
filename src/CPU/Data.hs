@@ -29,12 +29,10 @@ setIR ir' = modify $ \cpu -> cpu { ir = ir' }
 setRegVal :: Word16 -> Word8 -> CPUState ()
 setRegVal val reg = do
     cpu <- get
-    let stack' = stack cpu
-    modify $ \c -> c { stack = stack' V.// [(fromIntegral reg, val)] }
+    put cpu { stack = stack cpu V.// [(fromIntegral reg, val)] }
 
 getRegVal :: Word16 -> CPUState Word8
 getRegVal i = do
     cpu <- get
-    let regs' = regs cpu
     return $ regs cpu V.! fromIntegral i
 
