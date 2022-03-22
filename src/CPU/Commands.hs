@@ -1,8 +1,9 @@
+
 module CPU.Commands where
 import Display.Display
-import CPU.CPU
+
 import Data.Word (Word16, Word8)
-import CPU.Data
+import CPU.Data ( CPU(ir, regs), getPC, setPC, getRegVal )
 import Data.Vector as V ( (//), (!), Vector, replicate )
 import Control.Monad.State
 import Graphics.Gloss.Data.Picture
@@ -10,69 +11,54 @@ import Graphics.Gloss
 
 
 
+
 type Reg = Word8
 
-data Instruction =
-      Clear -- 00E0
-    | Jump !Word16 -- 1NNN
-    | SetReg !Reg !Word8 --6XNN
-    | AddToReg !Reg !Word8 --7XNN
-    | SetIR !Word16 -- ANNN
-    | Draw !Word16 --DXYN
+
 
 clear :: V.Vector Colour
 clear = V.replicate 2048 Black
 
-jump :: Word16 -> CPUState ()
+jump :: Word16 -> State CPU ()
 jump addr = do
     pc <- getPC
     setPC addr
 
-setReg :: Reg -> Word8 -> CPUState  ()
+setReg :: Reg -> Word8 -> State CPU  ()
 setReg reg val = do
     cpu <- get
     put cpu { regs = regs cpu V.// [(fromIntegral reg, val)] }
 
-addToReg :: Reg -> Word8 -> CPUState ()
+addToReg :: Reg -> Word8 -> State CPU ()
 addToReg ptrReg val = do
-    cpu <- get
-    let regs' = regs cpu
+    regs' <- gets regs
     modify $ \c -> c { regs = regs' V.// [(fromIntegral ptrReg, (regs' V.! fromIntegral ptrReg) + val)] }
 
-setIR :: Word16 -> CPUState ()
+setIR :: Word16 -> State CPU ()
 setIR addr = do
     cpu <- get
     let i = ir cpu
     modify $ \c -> c { ir = addr }
 
-test1:: V.Vector Colour 
-test1 = V.replicate 1 Black
 
-display :: CPU -> Word16 -> Word16 -> Word8 -> Bool
-display cpu x y n =
-    -- first value of x == true
-    if evalState(changeDisplay cpu x y n) test1
-    then True 
-    else False
+display :: CPU -> PixelGrid -> Word8 -> Word8 -> Word8 -> (PixelGrid, CPU)
+display cpu grid x y n = (grid', setReg0xF a)
 
+    where
+        vx = execState (getRegVal x) cpu
+        vy = execState (getRegVal y) cpu
+        (a, grid') =  runState(changeDisplay cpu x y n) grid
+        setReg0xF True = execState (setReg 0xF 0x1) cpu
+        setReg0xF False = execState (setReg 0xF 0x0) cpu
 
-
-changeDisplay :: CPU -> Word16 -> Word16 -> Word8 -> GridState Bool
+changeDisplay :: CPU -> Word8 -> Word8 -> Word8 -> State  PixelGrid Bool
 changeDisplay cpu x y n = do
     g <- get
-
-    -- let colours' = g V.// [(fromIntegral x + fromIntegral y * 64, n)]
-
-    -- unpack g to get its raw value
-
-
     let flips = getFlips cpu x y n
 
     put (g V.// flipPixels flips g)
     -- if any of the second value equal white
     return $ any (\(_,a) -> a == Black) (flipPixels flips g)
-
-
 
     where
         flipPixels :: [Int] -> V.Vector Colour -> [(Int, Colour)]
@@ -84,11 +70,7 @@ changeDisplay cpu x y n = do
         flip White = Black
 
 
-
-
-
-
-getFlips :: CPU -> Word16 -> Word16 -> Word8 -> [Int]
+getFlips :: CPU -> Word8 -> Word8 -> Word8 -> [Int]
 getFlips cpu x y n = getFlips' start' n
     where
         getFlips' start n

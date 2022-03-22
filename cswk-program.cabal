@@ -16,6 +16,7 @@ library
       CPU.CPU
       CPU.Data
       CPU.Memory
+      CPU.Utilities
       Display.Display
       Lib
       Rom.LoadRom

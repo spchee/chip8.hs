@@ -9,9 +9,13 @@ import qualified Data.Vector as V
 
 import CPU.Memory
 import CPU.Data
+import CPU.Utilities
+import CPU.Commands
+import Display.Display (PixelGrid)
 
 
-fetch ::CPUState Word16
+
+fetch ::State CPU Word16
 fetch = do
     cpu <- get
     let ptr =  pc cpu
@@ -23,16 +27,33 @@ fetch = do
     where
         combineWord8 a b = (fromIntegral a `shiftL` 8) .|. fromIntegral b
 
+execute :: PixelGrid -> CPU -> Word16 -> (PixelGrid, CPU)
+execute grid cpu w = case splitW16intoW4 w of
+    (0x0, 0x0, 0xE, 0x0) -> (clear, cpu) 
+
+    (0x1, _, _, _) -> -- Jump
+        (grid, execState (jump $ w .&. 0x0FFF) cpu)
+
+    (0x6, x, _, _) -> 
+        (grid, execState (setReg x (int w .&. 0xFF)) cpu)
+
+    (0x7, x, _, _ ) ->
+        (grid, execState (addToReg x (fromIntegral w .&. 0xFF)) cpu)
+
+    (0xA, _, _, _) ->
+        (grid, execState (setIR (int w .&. 0xFFF)) cpu)
+
+    (_, _, _, _) -> 
+        (grid, cpu)
+
+    where int a = fromIntegral a
+
+    
 
 
-test :: Word16
-test = 0xF212
 
 
--- convert word16 to hexadecimal characters
-splitWord16 :: (Num a, Bits a) => a -> (a, a, a, a)
-splitWord16 w = (getByte 3, getByte 2, getByte 1, getByte 0)
-    where getByte n = w `shiftR` (4 * n) .&. 0xF
+
 
 
 
