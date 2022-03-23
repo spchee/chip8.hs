@@ -32,8 +32,8 @@ setRegVal val reg = do
     cpu <- get
     put cpu { regs = regs cpu V.// [(fromIntegral reg, val)] }
 
-getRegVal :: Word8-> State CPU Word8
-getRegVal i = do
-    cpu <- get
-    return $ regs cpu V.! fromIntegral i
+getRegVal :: CPU -> Word8-> Word8
+getRegVal cpu ptr = regs cpu V.! fromIntegral ptr
+
+
 

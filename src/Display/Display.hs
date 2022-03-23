@@ -6,6 +6,7 @@ import Graphics.Gloss.Data.Picture hiding (Point, scale)
 import Data.Vector as V
 import Control.Monad.State
 import qualified Control.Applicative as V.Vector
+import Graphics.Gloss.Interface.IO.Game (Event)
 width :: Int
 width = 64
 height :: Int
@@ -45,7 +46,7 @@ pixelGridToPictures n grid
 
 getCoords:: Int -> (Float, Float)
 getCoords n = (x , y)
-    where 
+    where
         x = fromIntegral ((n `mod` 64) * scale - 32 * scale + scale `div` 2)
         y = fromIntegral ((n `div` 64) * scale -  16 * scale + scale `div` 2)
 -- alternating black and white squares
@@ -53,7 +54,7 @@ getCoords n = (x , y)
 
 window :: Display
 window = InWindow "Nice Window" ( width', height') (100, 100)
-    where 
+    where
         width' = scale * width + scale
         height' = scale * height + scale
 
@@ -62,6 +63,10 @@ background = greyN 0.15
 
 -- animateDisplay  ::PixelGrid -> Float -> IO ()
 -- animateDisplay grid t = display window background (pictures $ pixelGridToPictures 0 grid) 
+
+
+updateDisplay :: a -> (a -> Picture) -> (Event -> a -> a) -> (Float -> a -> a) -> IO()
+updateDisplay = play window background 10
 
 
 -- updateDisplay :: PixelGrid -> IO ()

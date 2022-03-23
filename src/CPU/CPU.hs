@@ -12,6 +12,7 @@ import CPU.Data
 import CPU.Utilities
 import CPU.Commands
 import Display.Display (PixelGrid)
+import Debug.Trace (traceM, trace)
 
 initCPU :: CPU
 initCPU = CPU {
@@ -31,11 +32,14 @@ initCPU = CPU {
 --         pc' = pc cpu
 --         combineWord8 a b = (fromIntegral a `shiftL` 8) .|. fromIntegral b
 
-fetch :: CPU -> Word16
-fetch = evalState fetch'
+fetch :: CPU -> (Word16, CPU )
+fetch = trace "fetch1:" $ runState fetch'
+
+
 
 fetch' ::State CPU Word16
 fetch' = do
+    traceM " fetch2"
     cpu <- get
     let ptr =  pc cpu
     modify $ \cpu -> cpu {pc = ptr + 2}
@@ -45,34 +49,35 @@ fetch' = do
 
 
 
-execute :: PixelGrid -> CPU -> Word16 -> (PixelGrid, CPU)
-execute grid cpu w = case splitW16intoW4 w of
-    (0x0, 0x0, 0xE, 0x0) -> (clear, cpu)
+execute :: PixelGrid ->  Word16 -> CPU -> (PixelGrid, CPU)
+execute grid  w cpu = trace "execute " $ 
+    case splitW16intoW4 w of
+        (0x0, 0x0, 0xE, 0x0) -> trace "clear" (clear, cpu)
 
-    (0x1, _, _, _) -> -- Jump
-        execState' jump 0xFFF
-        --(grid, execState (jump $ w .&. 0x0FFF) cpu)
+        (0x1, _, _, _) -> -- Jump
+            trace "jump" $ execState' jump 0xFFF
+            --(grid, execState (jump $ w .&. 0x0FFF) cpu)
 
-    (0x6, x, _, _) ->
-        execState'(setReg x) 0xFF
-        --(grid, execState (setReg x (int w .&. 0xFF)) cpu)
+        (0x6, x, _, _) ->
+            trace "setReg" $ execState'(setReg x) 0xFF
+            --(grid, execState (setReg x (int w .&. 0xFF)) cpu)
 
-    (0x7, x, _, _ ) ->
-        execState' (addToReg x) 0xFF
-        --(grid, execState (addToReg x (int w .&. 0xFF)) cpu)
+        (0x7, x, _, _ ) ->
+            trace "addtoReg" $ execState' (addToReg x) 0xFF
+            --(grid, execState (addToReg x (int w .&. 0xFF)) cpu)
 
-    (0xA, _, _, _) ->
-        execState' setIR 0xFFF
+        (0xA, _, _, _) ->
+            trace "setIR" $ execState' setIR 0xFFF
 
-    (0xD, x, y, n) ->
-        display cpu grid x y n
+        (0xD, x, y, n) ->
+            trace "Display" $ display cpu grid x y n
 
-    (_, _, _, _) ->
-        (grid, cpu)
+        (_, _, _, _) ->
+            trace "null"  (grid, cpu)
 
-    where
-        int a = fromIntegral a
-        execState' f b = (grid, execState ( f (int w .&. b)) cpu)
+        where
+            int a = fromIntegral a
+            execState' f b = (grid, execState ( f (int w .&. b)) cpu)
 
 
 

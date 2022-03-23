@@ -1,5 +1,5 @@
 module Main where
-import Lib.hs
+import Lib
 {- This is the main entry point to your program. -}
 
 main :: IO ()

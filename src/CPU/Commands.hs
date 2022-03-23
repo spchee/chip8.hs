@@ -45,8 +45,8 @@ display :: CPU -> PixelGrid -> Word8 -> Word8 -> Word8 -> (PixelGrid, CPU)
 display cpu grid x y n = (grid', setReg0xF a)
 
     where
-        vx = execState (getRegVal x) cpu
-        vy = execState (getRegVal y) cpu
+        vx = getRegVal cpu x
+        vy = getRegVal cpu x
         (a, grid') =  runState(changeDisplay cpu x y n) grid
         setReg0xF True = execState (setReg 0xF 0x1) cpu
         setReg0xF False = execState (setReg 0xF 0x0) cpu
@@ -63,7 +63,7 @@ changeDisplay cpu x y n = do
     where
         flipPixels :: [Int] -> V.Vector Colour -> [(Int, Colour)]
         flipPixels (x:xs) grid = (x, flip $ grid V.! x) : flipPixels xs grid
-        flipPixels [] grid = []
+        flipPixels [] grid = []        
 
         flip :: Colour -> Colour
         flip Black = White

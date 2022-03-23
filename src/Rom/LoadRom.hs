@@ -22,12 +22,13 @@ loadFile file = do
 loadIntoMemory :: [Int] -> State CPU ()
 loadIntoMemory binaryList = do 
     cpu@CPU{..} <- get
-    writeMemory' (map fromIntegral binaryList) 0x200
+    writeMemory' (map fromIntegral binaryList) 0
     where
       writeMemory' (x:xs) ptrMem  = do
         writeMemory ptrMem x
         writeMemory' xs (ptrMem + 1)
       writeMemory' [] _ = return ()
+
 
 
 
