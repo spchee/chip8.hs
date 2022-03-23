@@ -10,7 +10,8 @@ data CPU = CPU {
     memory :: V.Vector Word8,
     stack :: V.Vector Word16,
     regs :: V.Vector Word8,
-    delay_timer :: Word8
+    delay_timer :: Word8,
+    sound_timer :: Word8
 
 } deriving (Show)
 

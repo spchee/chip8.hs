@@ -8,7 +8,7 @@ import qualified Data.ByteString as B
 import CPU.Data
 import Control.Monad.State
 import CPU.Memory
-import CPU.Utils
+
 
 
 loadFile :: FilePath -> IO [Int]

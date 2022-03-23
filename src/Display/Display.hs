@@ -23,9 +23,8 @@ type PixelGrid = V.Vector Colour
 
 
 
-initGrid :: State PixelGrid ()
-initGrid =
-    put $  V.replicate 2048 Black
+initGrid :: PixelGrid
+initGrid = V.replicate 2048 Black
 
 
 alternating :: PixelGrid
@@ -34,7 +33,7 @@ alternating = V.generate 2048 (\n -> if even n then White else Black)
 pixelGridToPictures :: Int -> PixelGrid -> [Picture]
 pixelGridToPictures n grid
     | V.null grid = []
-    | otherwise = uncurry translate (getCoords n) (color (getColour grid) $ rectangleSolid (scale'-2) (scale'-2)) :pixelGridToPictures (n+1) (V.drop 1 grid)
+    | otherwise = uncurry translate (getCoords n) (color (getColour grid) $ rectangleSolid (scale'-2) (scale'-2)) : pixelGridToPictures (n+1) (V.drop 1 grid)
     where
         getColour grid
             | V.head grid == White = white
@@ -61,8 +60,17 @@ window = InWindow "Nice Window" ( width', height') (100, 100)
 background :: Color
 background = greyN 0.15
 
-main :: IO ()
-main = display window background (pictures $ pixelGridToPictures 0 alternating)
+-- animateDisplay  ::PixelGrid -> Float -> IO ()
+-- animateDisplay grid t = display window background (pictures $ pixelGridToPictures 0 grid) 
+
+
+-- updateDisplay :: PixelGrid -> IO ()
+-- updateDisplay grid = animate window background (pictures $ pixelGridToPictures 0 grid)
+
+
+-- updateDisplay' ::PixelGrid -> IO ()
+-- updateDisplay' grid = animate window background 5 (pictures $ pixelGridToPictures 0 grid) 
+
 
 -- addPixel :: (Int, Int) -> Picture
 -- addPixel (x, y) = translate (fromIntegral x) (fromIntegral y) $ color black $ rectangleSolid 10 10
