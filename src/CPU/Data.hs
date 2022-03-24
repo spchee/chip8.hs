@@ -13,7 +13,11 @@ import Control.Monad
     and appending to the end of the vector, etc. 
 
     I also decided to contain the PC, IR, memory, etc, all within the same data structure so that I could
-    easily access and change multiple at a time if needed within the CPU state monad. 
+    easily access and change multiple at a time if needed within the CPU state monad. Using record syntax
+    also makes it very easy to access and modify. 
+
+    I decided to use Word8/Word16 for all the registers and memory because not only would it be more accurate to
+    the real machine and more space efficient, but it would also allow me to use bitwise operations more cleanly. 
 =-}
 data CPU = CPU {
     pc :: Word16,

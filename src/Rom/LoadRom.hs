@@ -4,17 +4,18 @@ module Rom.LoadRom where
 import System.Environment
 import Data.Word (Word8, Word16)
 import Data.List
-import qualified Data.ByteString as B
+import Data.ByteString hiding (map) 
 import CPU.Data
 import Control.Monad.State
 import CPU.Memory
 import Debug.Trace
+import Prelude hiding (readFile)
 
 {-Loads a ROM file into a list of integers so it can be loaded into memory.-}
 loadFile :: FilePath -> IO [Int]
 loadFile path = do
-    file <- B.readFile path
-    let list = map fromIntegral (B.unpack file)
+    file <- readFile path
+    let list = map fromIntegral (unpack file)
     return list
 
 {- Loads a ROM file into a list of integers so it can be loaded into memory.

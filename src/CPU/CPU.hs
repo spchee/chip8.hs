@@ -41,7 +41,7 @@ fetch' = do
     cpu <- get
     let ptr =  pc cpu
     modify $ \cpu -> cpu {pc = ptr + 2}
-    return $ combineWord8 (readMemory ptr cpu) (readMemory (ptr + 1) cpu)
+    return $ combineWord8 (readMemory ptr cpu) (readMemory (ptr + 1) cpu) 
     where
         combineWord8 a b = (fromIntegral a `shiftL` 8) .|. fromIntegral b -- combines two bytes together into a single opcode 
 
