@@ -16,7 +16,6 @@ library
       CPU.CPU
       CPU.Data
       CPU.Memory
-      CPU.Utilities
       Display.Display
       Lib
       Rom.LoadRom
@@ -29,6 +28,7 @@ library
     , bytestring
     , gloss
     , mtl
+    , random
     , vector
   default-language: Haskell2010
 
@@ -45,5 +45,6 @@ executable cswk-program-exe
     , cswk-program
     , gloss
     , mtl
+    , random
     , vector
   default-language: Haskell2010

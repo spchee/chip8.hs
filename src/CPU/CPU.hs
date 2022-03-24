@@ -9,75 +9,168 @@ import qualified Data.Vector as V
 
 import CPU.Memory
 import CPU.Data
-import CPU.Utilities
 import CPU.Commands
 import Display.Display (PixelGrid)
-import Debug.Trace (traceM, trace)
 
+{-- initialises the CPU
+-- returns the initial state of the CPU
+--}
 initCPU :: CPU
 initCPU = CPU {
-    pc = 0x0,
-    ir = 0x0,
-    memory = V.replicate 4096 0x0,
-    stack = V.replicate 16 0x0,
-    regs = V.replicate 16 0x0,
-    delay_timer = 0x0,
+    pc = 0x200, -- Instructions start at 0x200 in memory. 
+    ir = 0x0, 
+    memory = V.replicate 4096 0x0, --Memory is 4096 bytes long
+    stack = V.replicate 16 0x0, -- Stack is 16 bytes long
+    regs = V.replicate 16 0x0, -- Registers are 16 bytes long
+    delay_timer = 0x0, 
     sound_timer = 0x0
 }
 
 
--- fetch :: CPU -> Word16
--- fetch cpu = combineWord8 (readMemory pc' cpu) (readMemory pc' cpu +1)
---     where 
---         pc' = pc cpu
---         combineWord8 a b = (fromIntegral a `shiftL` 8) .|. fromIntegral b
+
+{-- fetch cpu 
+-- This fetches the next instruction from memory, 
+-- and increments the PC which points towards where to fetch the next instruction.
+--}
 
 fetch :: CPU -> (Word16, CPU )
-fetch = trace "fetch1:" $ runState fetch'
-
-
+fetch = runState fetch'
 
 fetch' ::State CPU Word16
 fetch' = do
-    traceM " fetch2"
     cpu <- get
     let ptr =  pc cpu
     modify $ \cpu -> cpu {pc = ptr + 2}
     return $ combineWord8 (readMemory ptr cpu) (readMemory (ptr + 1) cpu)
     where
-        combineWord8 a b = (fromIntegral a `shiftL` 8) .|. fromIntegral b
+        combineWord8 a b = (fromIntegral a `shiftL` 8) .|. fromIntegral b -- combines two bytes together into a single opcode 
 
 
+{-- This uses pattern matching with case of the decode the opcode, and then
+    calls efficnetly calls the correct function to be executed whilst then returning the new PixelGrid State and CPU State. 
 
+    This also allows me to easily extract specific nibbles from the opcode if I need them. However I still resorted to using .&.
+    in many other places where I needed more than just a single nibble. 
+
+    There is unfortunately no real better way to really do this other than a giant chunk of code. As there are so many instructions, that 
+    any other potential method which simply be either more complicated or too confusing. 
+--}
 execute :: PixelGrid ->  Word16 -> CPU -> (PixelGrid, CPU)
-execute grid  w cpu = trace "execute " $ 
+execute grid  w cpu = 
     case splitW16intoW4 w of
-        (0x0, 0x0, 0xE, 0x0) -> trace "clear" (clear, cpu)
+        (0x0, 0x0, 0xE, 0x0) ->  (clear, cpu)
 
-        (0x1, _, _, _) -> -- Jump
-            trace "jump" $ execState' jump 0xFFF
-            --(grid, execState (jump $ w .&. 0x0FFF) cpu)
+        -- 1NNN set the PC to NNN (jump)
+        (0x1, _, _, _) ->
+            execState' jump 0x0FFF
 
-        (0x6, x, _, _) ->
-            trace "setReg" $ execState'(setReg x) 0xFF
-            --(grid, execState (setReg x (int w .&. 0xFF)) cpu)
 
+        -- 2NNN call subroutine at NNN
+        (0x2, _, _, _) ->
+            execState' callSubroutine 0x0FFF
+
+        -- 00EE return from subroutine from stack
+        (0x0, 0x0, 0xE, 0xE) ->
+            (grid, execState returnSubroutine cpu)
+
+        -- 3XNN increment pc by 2 if Vx = NN (skip) 
+        (0x3, x, _ , _) ->
+            execState' (skipIfEqual x) 0xFF
+
+
+        -- 4XNN increment pc by 2 if Vx != NN (skip)
+        (0x4, x, _, _) ->
+            execState' (skipIfNotEqual x) 0xFF
+
+        -- 5XY0 increment pc by 2 if Vx = Vy (skip)
+        (0x5, x, y, 0x0) ->
+            (grid, execState (skipIfRegsEqual x y) cpu)
+
+        -- 9XY0 increment pc by 2 if Vx != Vy (skip)
+        (0x9, x, y, 0x0) ->
+            (grid, execState (skipIfRegsNotEqual x y) cpu)
+
+        -- 6XNN set Vx = NN
+        ( 0x6, x, _, _) ->
+            execState'(setReg x) 0x00FF
+
+
+
+        -- 7XNN set Vx = Vx + NN
         (0x7, x, _, _ ) ->
-            trace "addtoReg" $ execState' (addToReg x) 0xFF
-            --(grid, execState (addToReg x (int w .&. 0xFF)) cpu)
+            execState' (addToReg x) 0x00FF
 
+
+        -- 8XY0 set Vx = Vy
+        (0x8, x, y, 0x0) -> let y' = getRegVal cpu y
+            in (grid, execState (setReg x y') cpu)
+
+        -- 8XY1 set Vx = Vx OR Vy
+        (0x8, x, y, 0x1) ->
+            (grid, execState (setRegLogicOp (.|.) x y) cpu)
+
+        -- 8XY2 set Vx = Vx AND Vy
+        (0x8, x, y, 0x2) ->
+            (grid, execState (setRegLogicOp (.&.) x y) cpu)
+
+        -- 8XY2 set Vx = Vx XOR Vy
+        (0x8, x, y, 0x3) ->
+            (grid, execState (setRegLogicOp xor x y) cpu)
+
+        -- 8XY4 set Vx = Vx + Vy
+        (0x8, x, y, 0x4) ->
+            (grid, execState (setRegAdd x y) cpu)
+
+        -- 8XY5 set Vx = Vx - Vy
+        (0x8, x, y, 0x5) ->
+            (grid, execState (setRegMinus x y) cpu)
+
+        -- 8XY4 set Vx = Vx - Vy
+        (0x8, x, y, 0x7) ->
+            (grid, execState (setRegMinusOpposite x y) cpu)
+        
+        -- 8XY6 shift Vx right by 1
+        (0x8, x, _, 0x6) ->
+            (grid, execState (shiftRight1 x) cpu)
+        
+        -- 8XYE shift Vx left by 1
+        (0x8, x, _, 0xE) ->
+            (grid, execState (shiftLeft1 x) cpu)
+
+        
+        -- ANNN set index register to NNN
         (0xA, _, _, _) ->
-            trace "setIR" $ execState' setIR 0xFFF
+            execState' setIR 0x0FFF
 
+        -- BNNN jump offset to NNN + V0
+        (0xB, _, _, _) ->
+            execState' jumpOffset 0x0FFF
+
+        -- --CXNN Generates a random number, ANDs it with NN and stores the result in Vx
+        -- (0xC, x, _, _) ->
+        --     (grid, execState (random x (fromIntegral (w .&. 0xFF))) cpu)
+
+        -- --FX1E Add VX to index register
+        -- (0xF, x, 0x1, 0xE) -> 
+        --     (grid, execState (addToIR x) cpu)
+    
+        --DXYN Draw sprite at Vx Vy (See Display.Display for full detailed explanation)
         (0xD, x, y, n) ->
-            trace "Display" $ display cpu grid x y n
+            display cpu grid x y n
 
         (_, _, _, _) ->
-            trace "null"  (grid, cpu)
+            (grid, cpu)
 
         where
             int a = fromIntegral a
-            execState' f b = (grid, execState ( f (int w .&. b)) cpu)
+
+            -- simplifies some of the code since a lot of the functions use this same format
+            execState' f b = (grid, execState ( f (int w .&. b)) cpu) 
+
+            -- This splits the opcode into 4 nibbles, which makes it much easier to pattern match. 
+            -- Shifting the bits made it extremely easy to extract each nibble and is also very efficient.
+            splitW16intoW4 w = (getByte 3, getByte 2, getByte 1, getByte 0) 
+                where getByte n = fromIntegral $ w `shiftR` (4 * n) .&. 0xF
 
 
 
@@ -87,15 +180,6 @@ execute grid  w cpu = trace "execute " $
 
 
 
-
-
-
-
-
--- decode::  Word16 -> ( Commands
--- decode word = case getFirstNibble word of
---     (0x0, 0x0, 0xE, 0x0) -> CLEAR -- 0x00E0
---      -> JUMP word
 
 
 
