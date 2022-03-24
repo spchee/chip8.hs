@@ -16,6 +16,7 @@ height = 32
 
 -- I decided to set actual values for the width, height and scale, as it meants it
 -- can easily be adjusted to any size depending on the resolution and size of the screen.
+-- A future thing I might do is have a terminal that allows people to schoose the size of the screen
 
 scale :: Int
 scale = 20

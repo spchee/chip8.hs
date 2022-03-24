@@ -12,11 +12,10 @@ import Debug.Trace
 
 {-Loads a ROM file into a list of integers so it can be loaded into memory.-}
 loadFile :: FilePath -> IO [Int]
-loadFile file = do
-    content <- B.readFile file
-    let binaryList = map fromIntegral (B.unpack content)
-    return binaryList
-
+loadFile path = do
+    file <- B.readFile path
+    let list = map fromIntegral (B.unpack file)
+    return list
 
 {- Loads a ROM file into a list of integers so it can be loaded into memory.
    This function is used to load the ROM into memory. 
