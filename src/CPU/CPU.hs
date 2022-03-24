@@ -17,12 +17,12 @@ import Display.Display (PixelGrid)
 --}
 initCPU :: CPU
 initCPU = CPU {
-    pc = 0x200, -- Instructions start at 0x200 in memory. 
-    ir = 0x0, 
+    pc = 0x200, -- Instructions start at 0x200 in memory.
+    ir = 0x0,
     memory = V.replicate 4096 0x0, --Memory is 4096 bytes long
     stack = V.replicate 16 0x0, -- Stack is 16 bytes long
     regs = V.replicate 16 0x0, -- Registers are 16 bytes long
-    delay_timer = 0x0, 
+    delay_timer = 0x0,
     sound_timer = 0x0
 }
 
@@ -56,7 +56,7 @@ fetch' = do
     any other potential method which simply be either more complicated or too confusing. 
 --}
 execute :: PixelGrid ->  Word16 -> CPU -> (PixelGrid, CPU)
-execute grid  w cpu = 
+execute grid  w cpu =
     case splitW16intoW4 w of
         (0x0, 0x0, 0xE, 0x0) ->  (clear, cpu)
 
@@ -71,7 +71,8 @@ execute grid  w cpu =
 
         -- 00EE return from subroutine from stack
         (0x0, 0x0, 0xE, 0xE) ->
-            (grid, execState returnSubroutine cpu)
+            execState'' returnSubroutine 
+
 
         -- 3XNN increment pc by 2 if Vx = NN (skip) 
         (0x3, x, _ , _) ->
@@ -84,11 +85,12 @@ execute grid  w cpu =
 
         -- 5XY0 increment pc by 2 if Vx = Vy (skip)
         (0x5, x, y, 0x0) ->
-            (grid, execState (skipIfRegsEqual x y) cpu)
+            execState'' $ skipIfRegsEqual x y
+
 
         -- 9XY0 increment pc by 2 if Vx != Vy (skip)
         (0x9, x, y, 0x0) ->
-            (grid, execState (skipIfRegsNotEqual x y) cpu)
+            execState'' $skipIfRegsNotEqual x y
 
         -- 6XNN set Vx = NN
         ( 0x6, x, _, _) ->
@@ -103,41 +105,42 @@ execute grid  w cpu =
 
         -- 8XY0 set Vx = Vy
         (0x8, x, y, 0x0) -> let y' = getRegVal cpu y
-            in (grid, execState (setReg x y') cpu)
+            in execState'' $ setReg x y'
 
         -- 8XY1 set Vx = Vx OR Vy
         (0x8, x, y, 0x1) ->
-            (grid, execState (setRegLogicOp (.|.) x y) cpu)
+            execState'' $ setRegLogicOp (.|.) x y
+
 
         -- 8XY2 set Vx = Vx AND Vy
         (0x8, x, y, 0x2) ->
-            (grid, execState (setRegLogicOp (.&.) x y) cpu)
+            execState'' $  setRegLogicOp (.&.) x y
 
         -- 8XY2 set Vx = Vx XOR Vy
         (0x8, x, y, 0x3) ->
-            (grid, execState (setRegLogicOp xor x y) cpu)
+            execState'' $ setRegLogicOp xor x y
 
         -- 8XY4 set Vx = Vx + Vy
         (0x8, x, y, 0x4) ->
-            (grid, execState (setRegAdd x y) cpu)
+            execState'' $ setRegAdd x y 
 
         -- 8XY5 set Vx = Vx - Vy
         (0x8, x, y, 0x5) ->
-            (grid, execState (setRegMinus x y) cpu)
+            execState'' $ setRegMinus x y
 
         -- 8XY4 set Vx = Vx - Vy
         (0x8, x, y, 0x7) ->
-            (grid, execState (setRegMinusOpposite x y) cpu)
-        
+            execState'' $ setRegMinusOpposite x y
+
         -- 8XY6 shift Vx right by 1
         (0x8, x, _, 0x6) ->
-            (grid, execState (shiftRight1 x) cpu)
-        
+            execState'' $ shiftRight1 x
+
         -- 8XYE shift Vx left by 1
         (0x8, x, _, 0xE) ->
-            (grid, execState (shiftLeft1 x) cpu)
+            execState'' $ shiftLeft1 x
 
-        
+
         -- ANNN set index register to NNN
         (0xA, _, _, _) ->
             execState' setIR 0x0FFF
@@ -153,7 +156,7 @@ execute grid  w cpu =
         -- --FX1E Add VX to index register
         -- (0xF, x, 0x1, 0xE) -> 
         --     (grid, execState (addToIR x) cpu)
-    
+
         --DXYN Draw sprite at Vx Vy (See Display.Display for full detailed explanation)
         (0xD, x, y, n) ->
             display cpu grid x y n
@@ -165,11 +168,12 @@ execute grid  w cpu =
             int a = fromIntegral a
 
             -- simplifies some of the code since a lot of the functions use this same format
-            execState' f b = (grid, execState ( f (int w .&. b)) cpu) 
+            execState' f b = (grid, execState ( f (int w .&. b)) cpu)
+            execState'' f = (grid, execState f cpu)
 
             -- This splits the opcode into 4 nibbles, which makes it much easier to pattern match. 
             -- Shifting the bits made it extremely easy to extract each nibble and is also very efficient.
-            splitW16intoW4 w = (getByte 3, getByte 2, getByte 1, getByte 0) 
+            splitW16intoW4 w = (getByte 3, getByte 2, getByte 1, getByte 0)
                 where getByte n = fromIntegral $ w `shiftR` (4 * n) .&. 0xF
 
 
